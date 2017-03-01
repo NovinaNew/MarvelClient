@@ -1,0 +1,19 @@
+dependencies: \
+  /Users/newcastle/Desktop/Marvel/Marvel/MainTableViewController.m \
+  /Users/newcastle/Desktop/Marvel/Marvel/MainTableViewController.h \
+  /Users/newcastle/Desktop/Marvel/Marvel/NetworkManager.h \
+  /Users/newcastle/Desktop/Marvel/Build/Products/Debug-iphonesimulator/AFNetworking/AFNetworking.framework/Headers/AFHTTPSessionManager.h \
+  /Users/newcastle/Desktop/Marvel/Build/Products/Debug-iphonesimulator/AFNetworking/AFNetworking.framework/Headers/AFURLSessionManager.h \
+  /Users/newcastle/Desktop/Marvel/Build/Products/Debug-iphonesimulator/AFNetworking/AFNetworking.framework/Headers/AFURLResponseSerialization.h \
+  /Users/newcastle/Desktop/Marvel/Build/Products/Debug-iphonesimulator/AFNetworking/AFNetworking.framework/Headers/AFURLRequestSerialization.h \
+  /Users/newcastle/Desktop/Marvel/Build/Products/Debug-iphonesimulator/AFNetworking/AFNetworking.framework/Headers/AFSecurityPolicy.h \
+  /Users/newcastle/Desktop/Marvel/Build/Products/Debug-iphonesimulator/AFNetworking/AFNetworking.framework/Headers/AFNetworkReachabilityManager.h \
+  /Users/newcastle/Desktop/Marvel/Marvel/MainTableViewCell.h \
+  /Users/newcastle/Desktop/Marvel/Marvel/DetailsViewController.h \
+  /Users/newcastle/Desktop/Marvel/Marvel/Hero.h \
+  /Users/newcastle/Desktop/Marvel/Marvel/AppDelegate.h \
+  /Users/newcastle/Desktop/Marvel/Build/Products/Debug-iphonesimulator/AFNetworking/AFNetworking.framework/Headers/AFNetworking.h \
+  /Users/newcastle/Desktop/Marvel/Build/Products/Debug-iphonesimulator/AFNetworking/AFNetworking.framework/Headers/AFURLConnectionOperation.h \
+  /Users/newcastle/Desktop/Marvel/Build/Products/Debug-iphonesimulator/AFNetworking/AFNetworking.framework/Headers/AFHTTPRequestOperation.h \
+  /Users/newcastle/Desktop/Marvel/Build/Products/Debug-iphonesimulator/AFNetworking/AFNetworking.framework/Headers/AFHTTPRequestOperationManager.h \
+  /Users/newcastle/Desktop/Marvel/Build/Products/Debug-iphonesimulator/AFNetworking/AFNetworking.framework/Headers/UIImageView+AFNetworking.h
