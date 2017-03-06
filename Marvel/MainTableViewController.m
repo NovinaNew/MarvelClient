@@ -31,71 +31,52 @@
 
 @implementation MainTableViewController
 
-static NSMutableArray *heroModel = nil;//simple, bun better use - NSFetchedResultController
+static bool inInfinitiQuery = false;
+
+
 static NSString *ENTITY_NAME = @"HeroEntity";
 
 
-
-- (Hero*) getHero:(int)index {
-     if(heroModel != nil
-        && index < [heroModel count]
-        && heroModel[index] != nil) {
-          return heroModel[index];
-     }
-     else return nil;
+- (void) viewDidAppear:(BOOL)animated {
+     [self.view.superview setContentMode:UIViewContentModeScaleToFill];
+     [self.view.superview setBackgroundColor: [UIColor colorWithPatternImage:
+                                               [UIImage imageNamed:@"launch_screen"]]];
+     
 }
-
-
-
 
 
 - (void) viewDidLoad {
      [super viewDidLoad];
-     
-     [self hideView];
+   
      [self configureView];
      
      [self initNetworkManager];
      [self initializeCoreData];
-
 }
 
 
 
--(void) showView {
-     [UIView animateWithDuration:0.5
-                           delay:0.1
-                         options: UIViewAnimationOptionCurveEaseInOut
-                      animations:^
-      {
-           CGRect frame = self.view.frame;
-           frame.origin.y = 0; //-self.view.frame.size.height;
-           frame.origin.x = 0;
-           
-           self.view.frame = frame;
-      }
-                      completion:^(BOOL finished)
-      {
-           NSLog(@"Completed");
-           
-      }];
+-(void) scrollViewDidScroll:(UIScrollView *)scrollView
+{
+     CGFloat bottom = scrollView.contentSize.height - scrollView.frame.size.height;
+     CGFloat buffer = scrollView.frame.size.height * 4;
+     CGFloat scrollPosition = scrollView.contentOffset.y;
+     
+     if (!inInfinitiQuery
+         && (scrollPosition > bottom - buffer)) {
+          
+          NSLog(@"Load more");
+          inInfinitiQuery = true;
+          
+          [_client loadNewPage];
+     }
 }
-
-
--(void) hideView {
-     CGRect frame = self.view.frame;
-     frame.origin.y = self.view.frame.size.height ;
-     frame.origin.x = 0;
-     self.view.frame = frame;
-}
-
 
 
 
 
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
 }
 
 
@@ -109,16 +90,11 @@ static NSString *ENTITY_NAME = @"HeroEntity";
 
 
 -(void) configureView {
-     
-//     UIImageView* backgroundImage = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"launch_screen"]];
-//     [self.view addSubview:backgroundImage];
-     heroModel = [[NSMutableArray alloc] init];
-     
-   
+//     self.navigationController.navigationBar.barTintColor = [UIColor grayColor];
      _mainTableView.rowHeight = UITableViewAutomaticDimension;
      _mainTableView.estimatedRowHeight = 140;
-     
-     self.navigationItem.titleView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"marvel"]];
+     self.navigationItem.titleView = [[UIImageView alloc] initWithImage:
+                                      [UIImage imageNamed:@"marvel"]];
 }
 
 
@@ -134,7 +110,9 @@ static NSString *ENTITY_NAME = @"HeroEntity";
 
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-     return heroModel == nil ? 0 : [heroModel count];
+     id<NSFetchedResultsSectionInfo> sectionInfo = self.frc.sections[section];
+     
+     return [sectionInfo numberOfObjects];
 }
 
 
@@ -144,35 +122,30 @@ static NSString *ENTITY_NAME = @"HeroEntity";
                                                                forIndexPath:indexPath];
      
      [cell.image setImage:nil];
+
+     Hero* hero = [self.frc objectAtIndexPath:indexPath];
      
-     if(heroModel != nil && indexPath.row < [heroModel count]) {
-          Hero* hero = heroModel[indexPath.row];
-          if(hero != nil) {
-               
-               cell.name.text = hero.name;
-               cell.about.text = hero.desc;
-               
-               NSURL *url = [NSURL URLWithString: hero.imagePath];
-               NSURLRequest *request = [NSURLRequest requestWithURL:url
-                                                        cachePolicy:NSURLRequestReturnCacheDataElseLoad
-                                                    timeoutInterval:10];
-               
-               UIImage *placeholderImage = [UIImage imageNamed:@"test"];
-               
-               
-               __weak MainTableViewCell *weakCell = cell;
-               [cell.image setImageWithURLRequest:request
-                                     placeholderImage:placeholderImage
-                                              success:^(NSURLRequest *request, NSHTTPURLResponse *response, UIImage *image) {
-                                                   weakCell.image.image = image;
-                                                   [weakCell setNeedsLayout];
-                                              } failure:nil];
-               
-          }
+     if(hero != nil) {
+          cell.name.text = hero.name;
+          cell.about.text = hero.desc;
+          
+          NSURL *url = [NSURL URLWithString: hero.imagePath];
+          NSURLRequest *request = [NSURLRequest requestWithURL:url
+                                                   cachePolicy:NSURLRequestReturnCacheDataElseLoad
+                                               timeoutInterval:10];
+          
+          UIImage *placeholderImage = [UIImage imageNamed:@"test"];
+          
+          
+          __weak MainTableViewCell *weakCell = cell;
+          [cell.image setImageWithURLRequest:request
+                                placeholderImage:placeholderImage
+                                         success:^(NSURLRequest *request, NSHTTPURLResponse *response, UIImage *image) {
+                                              weakCell.image.image = image;
+                                              [weakCell setNeedsLayout];
+                                         } failure:nil];
           
      }
-     
-    
      
      return cell;
 }
@@ -190,7 +163,10 @@ static NSString *ENTITY_NAME = @"HeroEntity";
      for(int i = 0; i < [dict count]; i++) {
           NSDictionary* dictElement = dict[i];
           if(dictElement != nil) {
-               Hero* hero = [[Hero alloc] init];
+               Hero* hero = [NSEntityDescription insertNewObjectForEntityForName:ENTITY_NAME
+                                                          inManagedObjectContext:_managedObjectContext];
+               
+               
                [hero setName: [dictElement valueForKey:@"name"]];
                [hero setDesc: [dictElement valueForKey:@"description"]];
 
@@ -202,13 +178,58 @@ static NSString *ENTITY_NAME = @"HeroEntity";
 
                [hero setImagePath:imagePath];
                
-               [self saveHero:hero];
+               NSManagedObjectContext *context = [self managedObjectContext];
+               if(context == nil) { return; }
                
-               [heroModel insertObject:hero atIndex:[heroModel count]];
+               NSError *error = nil;
+               if (![context save:&error]) {
+                    NSLog(@"Can't Save! %@ %@", error, [error localizedDescription]);
+               }
           }
      }
-     [self.tableView reloadData];
-     [self showView];
+     
+     
+}
+
+
+
+
+
+-(void)ncClient:(NetworkManager *)client didLoadNewPage:(id)responseObject
+{
+     NSDictionary* responseArray = (NSDictionary *)responseObject;
+     NSArray * dict = [responseArray valueForKeyPath:@"data.results"];
+     NSManagedObjectContext *context = [self managedObjectContext];
+     
+     
+     for(int i = 0; i < [dict count]; i++) {
+          NSDictionary* dictElement = dict[i];
+          
+          if(dictElement != nil) {
+               Hero* hero = [NSEntityDescription insertNewObjectForEntityForName:ENTITY_NAME
+                                                          inManagedObjectContext:_managedObjectContext];
+               
+               [hero setName: [dictElement valueForKey:@"name"]];
+               [hero setDesc: [dictElement valueForKey:@"description"]];
+               
+               NSDictionary* imageDict = [dictElement valueForKey:@"thumbnail"];
+               NSString* pathString = [imageDict valueForKey:@"path"];
+               NSString* extensionString = [imageDict valueForKey:@"extension"];
+               NSString* imagePath = [pathString stringByAppendingString:
+                                      [@"." stringByAppendingString:extensionString]];
+               
+               [hero setImagePath: imagePath];
+               
+               
+               if(context == nil) { return; }
+               
+               NSError *error = nil;
+               if (![context save:&error]) {
+                    NSLog(@"Can't Save! %@ %@", error, [error localizedDescription]);
+               }
+          }
+     }
+     inInfinitiQuery = false;
      
      
 }
@@ -227,12 +248,13 @@ static NSString *ENTITY_NAME = @"HeroEntity";
                            actionWithTitle:@"Ok"
                            style:UIAlertActionStyleDefault
                            handler:^(UIAlertAction * action) {
-                                NSLog([error description]);
-                                [self loadModel];
+                                NSLog(@"On Error");
+                                NSLog(@"%@", [error description]);
+                                
+//                                [self loadModel];
                            }]];
 
      [self presentViewController:alertView animated:YES completion:nil];
-     [self showView];
 
      
      
@@ -240,14 +262,16 @@ static NSString *ENTITY_NAME = @"HeroEntity";
 
 
 -(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
-     if(heroModel != nil && indexPath.row < [heroModel count]) {
-          Hero* hero = heroModel[indexPath.row];
-          if(hero != nil) {
-               if([[hero desc] length] < 200) {
-                    return 160;
-               }
+     
+     
+     Hero* hero = [self.frc objectAtIndexPath:indexPath];
+     
+     if(hero != nil) {
+          if([[hero desc] length] < 200) {
+               return 160;
           }
      }
+     
      return -1;
      
 }
@@ -258,7 +282,8 @@ static NSString *ENTITY_NAME = @"HeroEntity";
 {
      if ([[segue identifier] isEqualToString:@"Show_Details"]) {
           DetailsViewController *vc = [segue destinationViewController];
-          Hero* hero = [self getHero: (int)[self.tableView indexPathForSelectedRow].row];
+          
+          Hero* hero = [self.frc objectAtIndexPath:[self.tableView indexPathForSelectedRow]];
           if(hero != nil) {
                [vc setHero:hero];
           }
@@ -278,23 +303,6 @@ static NSString *ENTITY_NAME = @"HeroEntity";
 //TODO: NSFetchedResultController
 
 
-- (void)saveHero:(Hero*) hero {
-     NSManagedObjectContext *context = [self managedObjectContext];
-     if(context == nil) { return; }
-     
-     NSManagedObject *entity = [NSEntityDescription insertNewObjectForEntityForName:ENTITY_NAME
-                                                             inManagedObjectContext:context];
-     [entity setValue: hero.name forKey:@"name"];
-     [entity setValue: hero.desc forKey:@"desc"];
-     [entity setValue: hero.imagePath forKey:@"imagePath"];
-     
-     NSError *error = nil;
-     
-     if (![context save:&error]) {
-          NSLog(@"Can't Save! %@ %@", error, [error localizedDescription]);
-     }
-     
-}
 
 
 
@@ -327,6 +335,22 @@ static NSString *ENTITY_NAME = @"HeroEntity";
           
           NSAssert(store != nil, @"Error initializing PSC: %@\n%@", [error localizedDescription], [error userInfo]);
      });
+     
+     
+     //init FRC
+     NSFetchRequest *fetchRequest = [[NSFetchRequest alloc] initWithEntityName:ENTITY_NAME];
+     NSSortDescriptor* sortDesc = [[NSSortDescriptor alloc] initWithKey:@"name" ascending:YES];
+     fetchRequest.sortDescriptors = @[sortDesc];
+     self.frc = [[NSFetchedResultsController alloc] initWithFetchRequest:fetchRequest
+                                                  managedObjectContext:self.managedObjectContext sectionNameKeyPath:nil cacheName:nil];
+     
+     
+     self.frc.delegate = self;
+     NSError* error;
+     if([self.frc performFetch: &error]) {
+          NSLog(@"@Loaded");
+     }
+     
 }
 
 
@@ -338,47 +362,94 @@ static NSString *ENTITY_NAME = @"HeroEntity";
 
 
 
+
+
+
 - (void) clearModel {
      NSLog(@"Clear Model");
      
      NSError *error = nil;
      NSArray *items = [self getItemsFromContext:error];
-
+     
      for (NSManagedObject *managedObject in items) {
           [_managedObjectContext deleteObject:managedObject];
      }
      if (![_managedObjectContext save:&error]) { /*Empty*/ }
-
+     
 }
 
 
--(void) loadModel {
-     NSLog(@"Load Model");
+
+
+- (void)saveHero:(Hero*) hero {
+     NSLog(@"Save Hero");
+     NSManagedObjectContext *context = [self managedObjectContext];
+     if(context == nil) { return; }
+     
+     NSManagedObject *entity = [NSEntityDescription insertNewObjectForEntityForName:ENTITY_NAME
+                                                             inManagedObjectContext:context];
+     [entity setValue: hero.name forKey:@"name"];
+     [entity setValue: hero.desc forKey:@"desc"];
+     [entity setValue: hero.imagePath forKey:@"imagePath"];
      
      NSError *error = nil;
-     NSArray *items = [self getItemsFromContext:error];
-     if (!items) {
-          NSLog(@"Error fetching objects: %@\n%@", [error localizedDescription], [error userInfo]);
-          return;
-     }
-     else {
-          for(int i = 0; i < [items count]; i++) {
-               Hero* hero = [[Hero alloc] init];
-               NSManagedObject* object = items[i];
-               if(object != nil) {
-                    [hero setName: [object valueForKey:@"name"]];
-                    [hero setDesc: [object valueForKey:@"desc"]];
-                    [hero setImagePath: [object valueForKey:@"imagePath"]];
-               }
-               
-               [heroModel insertObject:hero atIndex:[heroModel count]];
-          }
-          [_mainTableView reloadData];
-          
+     
+     if (![context save:&error]) {
+          NSLog(@"Can't Save! %@ %@", error, [error localizedDescription]);
      }
      
 }
 
+
+
+#pragma mark - NSFetchedController
+
+
+
+-(void) controller:(NSFetchedResultsController *)controller
+   didChangeObject:(id)anObject
+       atIndexPath:(NSIndexPath *)indexPath
+     forChangeType:(NSFetchedResultsChangeType)type
+      newIndexPath:(NSIndexPath *)newIndexPath {
+     
+     if(type == NSFetchedResultsChangeDelete) {
+          [self.tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+     }
+     else if (type == NSFetchedResultsChangeInsert) {
+          [self.tableView insertRowsAtIndexPaths: @[newIndexPath] withRowAnimation:UITableViewRowAnimationNone];
+     }
+     
+}
+
+
+-(void) controllerWillChangeContent:(NSFetchedResultsController *)controller {
+     [CATransaction begin];
+     [CATransaction setDisableActions:YES];
+     
+     [self.tableView beginUpdates];
+}
+
+
+-(void) controllerDidChangeContent:(NSFetchedResultsController *)controller {
+     [self.tableView endUpdates];
+     [CATransaction commit];
+}
+
+
+//- (void)viewDidAppear:(BOOL)animated
+//{
+//     [super viewDidAppear:animated];
+//
+//     [UIView animateWithDuration:1.0
+//                      animations:^{
+//                           [self.view setAlpha:0];
+//                           [self.view setCenter:CGPointMake(self.view.center.x+50.0,
+//                                                            self.view.center.y+50.0)];
+//                      }
+//                      completion:^(BOOL finished) {
+////                           [self.view removeFromSuperview];
+//                      }];
+//}
 
 
 

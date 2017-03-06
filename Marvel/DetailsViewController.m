@@ -25,6 +25,7 @@
 
 - (void)viewDidLoad {
      [super viewDidLoad];
+//     self.view.backgroundColor = [UIColor grayColor];
      
      _heroName.text = hero.name;
      _aboutHero.text = hero.desc;

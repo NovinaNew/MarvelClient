@@ -16,12 +16,16 @@
 + (NetworkManager *)Instance;
 - (instancetype)initWithBaseURL:(NSURL *)url;
 - (void) updateModel;
+- (void) loadNewPage;
 
 @end
 
 
 @protocol NetworkManagerDelegate <NSObject>
 @optional
--(void)ncClient:(NetworkManager *)client didUpdate:(id)weather;
+
+-(void)ncClient:(NetworkManager *)client didUpdate:(id)data;
+-(void)ncClient:(NetworkManager *)client didLoadNewPage:(id)data;
 -(void)ncClient:(NetworkManager *)client didFailWithError:(NSError *)error;
+
 @end

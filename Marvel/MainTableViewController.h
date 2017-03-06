@@ -7,17 +7,16 @@
 //
 
 #import <UIKit/UIKit.h>
+#import <CoreData/CoreData.h>
 #import "NetworkManager.h"
 
-//
-//
-// Я не успел написать без ARC.
-// И лучше предоставлю такой вариант, чем с потенциальной ошибкой.
+
 //
 
 
-@interface MainTableViewController : UITableViewController<NetworkManagerDelegate>
+@interface MainTableViewController : UITableViewController<NetworkManagerDelegate, NSFetchedResultsControllerDelegate>
 
 @property (strong, nonatomic) IBOutlet UITableView *mainTableView;
+@property (strong, nonatomic) NSFetchedResultsController* frc;
 
 @end

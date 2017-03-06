@@ -22,6 +22,12 @@ static NSString* ts = @"&ts=";
 static int timeStamp = 0;
 
 
+static const int pageCount = 50;
+static int countOffset;
+NSNumber* offset;
+
+
+
 
 
 + (NSString *)MD5:(NSString *)input {
@@ -58,6 +64,8 @@ static int timeStamp = 0;
      if (self) {
           self.responseSerializer = [AFJSONResponseSerializer serializer];
           self.requestSerializer = [AFJSONRequestSerializer serializer];
+          
+          offset = [[NSNumber alloc] initWithInt:0];
      }
 
      return self;
@@ -84,9 +92,7 @@ static int timeStamp = 0;
 
 
 
-
-
--(void) updateModel {
+-(NSMutableDictionary* ) createQuery {
      NSMutableDictionary *parameters = [NSMutableDictionary dictionary];
      NSString* timeStampString = [NSString stringWithFormat:@"%i", ++timeStamp ];
      NSString* md5String =[timeStampString stringByAppendingString: [PRIVATE_KEY stringByAppendingString:PUBLIC_KEY]];
@@ -97,18 +103,50 @@ static int timeStamp = 0;
      parameters[@"apikey"] = PUBLIC_KEY;
      parameters[@"limit"] = [NSNumber numberWithInteger:50];
      
+     return  parameters;
      
-     [self GET:@"characters" parameters:parameters success:^(NSURLSessionDataTask *task, id responseObject) {
+}
+
+
+
+-(void) loadNewPage {
+     NSMutableDictionary *parameters = [self createQuery];
+     
+     offset = [[NSNumber alloc] initWithInt:pageCount * ++countOffset];
+     parameters[@"offset"] = offset ;
+     
+     [self get:parameters success:^(NSURLSessionDataTask *task, id responseObject) {
+          if ([self.delegate respondsToSelector:@selector(ncClient:didLoadNewPage:)]) {
+               [self.delegate ncClient:self didLoadNewPage:responseObject];
+          }
+     }];
+     
+}
+
+
+
+-(void) updateModel {
+     
+     NSMutableDictionary *parameters = [self createQuery];
+     [self get:parameters success:^(NSURLSessionDataTask *task, id responseObject) {
           if ([self.delegate respondsToSelector:@selector(ncClient:didUpdate:)]) {
                [self.delegate ncClient:self didUpdate:responseObject];
           }
-     } failure:^(NSURLSessionDataTask *task, NSError *error) {
+     }];
+
+
+}
+
+
+-(void) get:(NSMutableDictionary*) parameters
+        success: (void (^)(NSURLSessionDataTask *task, id responseObject))success {
+     
+     [self GET:@"characters" parameters:parameters success:success
+       failure:^(NSURLSessionDataTask *task, NSError *error) {
           if ([self.delegate respondsToSelector:@selector(ncClient:didFailWithError:)]) {
                [self.delegate ncClient:self didFailWithError:error];
           }
      }];
-     
-     
 }
 
 
